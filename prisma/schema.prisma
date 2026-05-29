@@ -1,0 +1,111 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  savedColleges SavedCollege[]
+  reviews       Review[]
+}
+
+model College {
+  id                  String         @id @default(uuid())
+  name                String
+  slug                String         @unique
+  description         String
+  city                String
+  state               String
+  ownershipType       String         // e.g. "Public", "Private"
+  rating              Float          @default(0.0)
+  feesMin             Int            // Minimum annual fees for quick filters
+  feesMax             Int            // Maximum annual fees for quick filters
+  placementPercent    Float          @default(0.0) // Overall placement rate (e.g. 85.0 for 85%)
+  avgPackage          Float          @default(0.0) // In LPA (Lakhs Per Annum)
+  highestPackage      Float          @default(0.0) // In LPA
+  campusSize          Float          // In Acres
+  hostelAvailable     Boolean        @default(false)
+  image               String
+  gallery             String[]       // Image URLs
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  courses             Course[]
+  placements          Placement[]
+  reviews             Review[]
+  savedBy             SavedCollege[]
+
+  @@index([state])
+  @@index([city])
+  @@index([rating])
+  @@index([ownershipType])
+  @@index([feesMin, feesMax])
+  @@index([name])
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  collegeId   String
+  college     College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  name        String   // e.g. "B.Tech Computer Science"
+  duration    Int      // In Years
+  feesAnnual  Int      // Annual Fees in INR
+  type        String   // e.g. "Engineering", "Management", "Medical", "Arts", "Science"
+  seats       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([collegeId])
+  @@index([type])
+}
+
+model Placement {
+  id             String   @id @default(uuid())
+  collegeId      String
+  college        College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  year           Int
+  avgPackage     Float    // LPA
+  highestPackage Float    // LPA
+  placementRate  Float    // %
+  topRecruiters  String[] // Array of company names
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([collegeId])
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  collegeId   String
+  college     College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating      Float    // 1.0 to 5.0
+  comment     String
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([collegeId])
+  @@index([userId])
+}
+
+model SavedCollege {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collegeId String
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, collegeId])
+  @@index([userId])
+}
